@@ -1,4 +1,5 @@
 
+import os
 from abc import ABC, abstractmethod
 from typing import List
 
@@ -6,11 +7,12 @@ from sentence_transformers import SentenceTransformer
 
 
 class EmbeddingService(ABC):
+    """Interface for embedding providers."""
 
     @abstractmethod
     def embed_text(self, text: str) -> List[float]:
         """Convert text into an embedding vector."""
-        pass
+        raise NotImplementedError
 
 
 class LocalEmbeddingService(EmbeddingService):
@@ -20,7 +22,12 @@ class LocalEmbeddingService(EmbeddingService):
         self,
         model_name: str = "sentence-transformers/all-MiniLM-L6-v2",
     ):
-        self.model = SentenceTransformer(model_name)
+        model_path = os.getenv("EMBEDDING_MODEL_PATH", model_name)
+
+        self.model = SentenceTransformer(
+            model_path,
+            local_files_only=os.getenv("HF_HUB_OFFLINE") == "1",
+        )
 
     def embed_text(self, text: str) -> List[float]:
         """Convert text into a normalized embedding vector."""

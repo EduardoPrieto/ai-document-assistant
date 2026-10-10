@@ -28,3 +28,22 @@ htmlcov/
 
 # Logs
 *.log
+task-definition.json
+
+# Environment variables and secrets
+.env*
+!.env.example
+*.pem
+*.key
+*credentials*.json
+app-api-key-policy.json
+
+# Python environments
+.conda/
+env/
+
+# Model artifacts and caches
+models/
+model/
+.cache/
+huggingface/

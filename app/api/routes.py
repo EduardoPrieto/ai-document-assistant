@@ -1,8 +1,33 @@
 
-from fastapi import APIRouter, HTTPException, Request
+import os
+import secrets
+
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel, Field
 
 router = APIRouter()
+
+
+def verify_api_key(
+    x_api_key: str = Header(default="", alias="X-API-Key"),
+):
+    """Validate the API key supplied by the client."""
+
+    expected_key = os.getenv("APP_API_KEY")
+
+    if not expected_key:
+        raise HTTPException(
+            status_code=503,
+            detail="API authentication is not configured.",
+        )
+
+    if not x_api_key or not secrets.compare_digest(
+        x_api_key, expected_key
+    ):
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or missing API key.",
+        )
 
 
 class QuestionRequest(BaseModel):
@@ -35,7 +60,11 @@ def health_check():
     return {"status": "healthy"}
 
 
-@router.post("/ask", response_model=QuestionResponse)
+@router.post(
+    "/ask",
+    response_model=QuestionResponse,
+    dependencies=[Depends(verify_api_key)],
+)
 def ask_question(
     payload: QuestionRequest,
     request: Request,

@@ -1,55 +1,52 @@
-import boto3
-from botocore.exceptions import ClientError
 
+import os
 
-REGION = "us-east-1"
+import anthropic
+from dotenv import load_dotenv
 
-MODEL_ID = "global.anthropic.claude-haiku-4-5-20251001-v1:0"
+load_dotenv()
 
+api_key = os.getenv("ANTHROPIC_API_KEY")
 
-def ask_claude(prompt: str) -> str:
-    """Send a prompt to Claude through Amazon Bedrock."""
-
-    client = boto3.client(
-        "bedrock-runtime",
-        region_name=REGION,
+if not api_key:
+    raise RuntimeError(
+        "No se encontró ANTHROPIC_API_KEY en el archivo .env"
     )
 
-    response = client.converse(
-        modelId=MODEL_ID,
+client = anthropic.Anthropic(api_key=api_key)
+
+try:
+    response = client.messages.create(
+        model="claude-haiku-5-5",
+        max_tokens=200,
         messages=[
             {
                 "role": "user",
-                "content": [
-                    {
-                        "text": prompt,
-                    }
-                ],
+                "content": (
+                    "Explica en español qué es RAG en inteligencia "
+                    "artificial en un máximo de tres frases."
+                ),
             }
         ],
-        inferenceConfig={
-            "maxTokens": 300,
-            "temperature": 0.2,
-        },
     )
 
-    return response["output"]["message"]["content"][0]["text"]
+    for block in response.content:
+        if block.type == "text":
+            print("\nRespuesta de Claude:\n")
+            print(block.text)
 
+    print(f"\nTokens de entrada: {response.usage.input_tokens}")
+    print(f"Tokens de salida: {response.usage.output_tokens}")
 
-if __name__ == "__main__":
-    try:
-        response = ask_claude(
-            "Explica en español qué es RAG en inteligencia artificial "
-            "en máximo 3 frases."
-        )
+except anthropic.AuthenticationError:
+    print("Error: la API key no es válida o no está autorizada.")
 
-        print("\nRespuesta de Claude:\n")
-        print(response)
+except anthropic.RateLimitError:
+    print("Error: se alcanzó un límite de uso de la API.")
 
-    except ClientError as error:
-        print("\nError de AWS/Bedrock:")
-        print(error)
+except anthropic.APIStatusError as error:
+    print(f"Error de Anthropic: HTTP {error.status_code}")
+    print(error.message)
 
-    except Exception as error:
-        print("\nError inesperado:")
-        print(error)
+except anthropic.APIConnectionError:
+    print("Error de conexión con la API de Anthropic.")
